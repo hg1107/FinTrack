@@ -1,0 +1,134 @@
+================================================================================
+                    FINTRACK APPLICATION ANALYSIS REPORT
+================================================================================
+FinTrack is a premium, modern, offline-first personal finance tracker mobile 
+application built with Android SDK, Jetpack Compose, Material 3, and Room DB.
+
+This document details the complete feature set, functional workflows, technical 
+architecture, and minute design patterns of the FinTrack codebase.
+
+--------------------------------------------------------------------------------
+1. ARCHITECTURAL OVERVIEW & DATA FLOW
+--------------------------------------------------------------------------------
+The application is structured around a classic MVVM (Model-View-ViewModel) 
+architecture utilizing Clean Architecture concepts (View -> ViewModel -> Repository 
+-> DAO -> Database).
+
+Key Architectural Components:
+- Single Activity Design: MainActivity orchestrates navigation using Compose 
+  Navigation and a customized Scaffold that handles a persistent custom 
+  bottom navigation bar.
+- Reactive UI: ViewModels expose screen states via Kotlin kotlinx.coroutines.flow 
+  StateFlows. Views collect these flows as Compose states. Any database update 
+  propagates automatically to the UI through Room Flow queries.
+- Hilt Dependency Injection: Dependencies (AppDatabase, Repositories, WorkManager) 
+  are provided via Hilt module bindings, ensuring testability and modularity.
+- Background Scheduling: WorkManager runs background tasks for daily bills 
+  without active user interaction.
+
+--------------------------------------------------------------------------------
+2. DETAILED MODULE & FEATURE SPECIFICATIONS
+--------------------------------------------------------------------------------
+
+A. HOME SCREEN (DASHBOARD OVERVIEW)
+   - Functionality: Provides a high-level summary of the user's financial health.
+   - Core Features:
+     * Displays total active Kitty Parties count.
+     * Displays total number of saved Credit Cards alongside cumulative outstanding.
+     * Displays total Bank Accounts count and cumulative aggregate balance.
+     * High-contrast metrics styled with HSL-tailored CreditGreen / DebitRed.
+
+B. KITTY PARTIES MANAGEMENT
+   - Overview: A dedicated tool to manage rotational group-savings schemes (Kitties).
+   - Core Data & Business Rules:
+     * A Kitty is initialized with a Start Month and Start Year.
+     * A rolling 12-month window is automatically computed for the payment cycles.
+     * Members can be added with their Name, Host Month (the month they get the 
+       rotational payout), and Monthly Contribution amount.
+   - List View:
+     * Displays active kitties with search functionality (case-insensitive name).
+   - Detail View:
+     * Displays monthly metrics (Target vs. Collected amounts).
+     * Custom month-year rolling selector.
+     * Sort Members dynamic filter chips:
+       1. HOST_MONTH (Default): Chronological order of members hosting.
+       2. NAME: Alphabetical A-Z.
+       3. PAID_STATUS: Shows Unpaid members first, then Paid members.
+   - Payment Entry Sheet:
+     * Interactive mark-as-paid toggle, amount field, and date selector.
+     * Multiple payment modes: Cash, Office, and Online.
+     * Saved Accounts Dropdown: Selecting "Online" payment mode queries saved bank 
+       accounts and presents them in a dropdown.
+     * Linked Auto-Debit Action: Saving an Online payment from a specific account 
+       automatically inserts a Debit Transaction into that bank account, updating 
+       its balance with a customized descriptor note.
+     * Input fields automatically shift using imePadding when the keyboard opens.
+     * Data Integrity: Unique constraints prevent duplicate logs for the same 
+       member in the same month/year, allowing clean payment updates/resets.
+
+C. CREDIT CARDS TRACKER
+   - Overview: Logs card limits, spending, and outstanding payments.
+   - Core Features:
+     * Track available credit limits and outstanding totals across multiple cards.
+     * Credit Card Detail View includes a LinearProgressIndicator representing the 
+       used limit percentage (dynamic color turns red/error once utilized limit 
+       passes 80%).
+     * Last Payment Date display tracking when the user last credited their card.
+     * Log spends (DEBIT) and payments (CREDIT).
+     * Automatically calculates running outstanding balances.
+
+D. BANK ACCOUNTS & EMIs TRACKER
+   - Overview: Manages bank balances, transactional history, and recurring loans.
+   - Tab 1: Transactions
+     * Displays lists of deposits (CREDIT) and payments (DEBIT) for the account.
+     * Computes the current balance (Sum of Credits - Sum of Debits).
+   - Tab 2: EMI Schedule
+     * Tracks installment plans (Home Loan, Auto Loan, etc.).
+     * Provides quick check-in toggle to mark EMIs paid.
+     * Individual daily alerts/reminders switch.
+
+E. DAILY EMI REMINDERS WORKER
+   - Overview: Triggers local system notifications when bills are due.
+   - Technology: Room DB + WorkManager + Android NotificationManager.
+   - Logic:
+     * WorkManager executes `EmiReminderWorker` daily.
+     * Iterates through unpaid, active EMIs where reminder is enabled.
+     * Correctly handles month wrap calculations (e.g. today is 28th, due date is 
+       3rd of next month).
+     * Compares remaining days with user-configured "Reminder Days Before" setting 
+       and pops a system notification if due.
+
+--------------------------------------------------------------------------------
+3. DATABASE SCHEMA & ENTITY DESIGN (ROOM DB)
+--------------------------------------------------------------------------------
+The local DB contains 8 main tables:
+
+1. `kitties`: id (PK), name, startMonth, startYear, createdDate.
+2. `kitty_members`: id (PK), kittyId (FK to kitties), name, hostMonth, amount.
+3. `kitty_payments`: id (PK), memberId (FK to kitty_members), month, year, isPaid, 
+   amountPaid, datePaid, paymentMode, onlineAccountName.
+   * Unique composite constraint: `(memberId, month, year)` ensuring one payment 
+     record per member per month/year.
+4. `credit_cards`: id (PK), name, lastFourDigits, creditLimit, createdDate.
+5. `card_transactions`: id (PK), cardId (FK to credit_cards), date, amount, type 
+   (DEBIT/CREDIT), note.
+6. `bank_accounts`: id (PK), name, lastFourDigits, createdDate.
+7. `account_transactions`: id (PK), accountId (FK to bank_accounts), date, amount, 
+   type (DEBIT/CREDIT), note.
+8. `emis`: id (PK), accountId (FK to bank_accounts), label, amount, dueDayOfMonth, 
+   isPaid, paidDate, reminderDaysBefore, isReminderEnabled.
+
+--------------------------------------------------------------------------------
+4. NOTABLE ARCHITECTURAL HIGHLIGHTS & EDGE CASES HANDLED
+--------------------------------------------------------------------------------
+- Database Versioning: Version 2 Database Migration includes SQL schema alterations 
+  safely adding a unique index to the `kitty_payments` table without destroying 
+  pre-existing transactional data.
+- UI Layout Robustness: Scaffolds apply inner padding to content, preventing the 
+  Floating Action Button (FAB) from sliding behind the bottom navigation bar.
+- Keyboard Handling: Bottom sheets utilize `imePadding()` to ensure text fields 
+  remain viewable when the user types on virtual keyboards.
+- Month-Wrap Logic: The daily worker contains robust calendar logic calculating 
+  adjusted days until due dates when the current month wraps around.
+- Account-Link Auto Logging: Eliminates manual data entry duplication when 
+  kitty payments are cleared online by automating account transactions.

@@ -4,6 +4,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -52,6 +54,7 @@ fun KittyDetailScreen(
     }
 
     var showDeleteDialog by remember { mutableStateOf(false) }
+    var showResetDialog by remember { mutableStateOf(false) }
     var showPaymentSheet by remember { mutableStateOf(false) }
     var selectedMember by remember { mutableStateOf<KittyMember?>(null) }
     var showAddMemberSheet by remember { mutableStateOf(false) }
@@ -104,6 +107,10 @@ fun KittyDetailScreen(
                             onClick = { menuExpanded = false; onNavigateToEdit(kitty.id) }
                         )
                         DropdownMenuItem(
+                            text = { Text("Reset All to Unpaid", color = Error) },
+                            onClick = { menuExpanded = false; showResetDialog = true }
+                        )
+                        DropdownMenuItem(
                             text = { Text("Delete Kitty", color = Error) },
                             onClick = { menuExpanded = false; showDeleteDialog = true }
                         )
@@ -134,35 +141,85 @@ fun KittyDetailScreen(
 
             // Action buttons
             item {
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
                     OutlinedButton(
                         onClick = { onNavigateToEdit(kitty.id) },
                         modifier = Modifier.weight(1f),
-                        border = ButtonDefaults.outlinedButtonBorder.copy(brush = SolidColor(Outline)),
+                        border = ButtonDefaults.outlinedButtonBorder(enabled = true).copy(brush = SolidColor(Outline)),
                         shape = RoundedCornerShape(10.dp)
                     ) {
-                        Icon(Icons.Default.Edit, null, modifier = Modifier.size(16.dp), tint = OnSurface)
-                        Spacer(Modifier.width(6.dp))
-                        Text("EDIT", color = OnSurface)
+                        Icon(Icons.Default.Edit, null, modifier = Modifier.size(15.dp), tint = OnSurface)
+                        Spacer(Modifier.width(4.dp))
+                        Text("EDIT", color = OnSurface, style = MaterialTheme.typography.labelSmall)
                     }
                     Button(
                         onClick = { editingMember = null; showAddMemberSheet = true },
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier.weight(1.2f),
                         colors = ButtonDefaults.buttonColors(containerColor = PrimaryContainer),
                         shape = RoundedCornerShape(10.dp)
                     ) {
-                        Icon(Icons.Default.PersonAdd, null, modifier = Modifier.size(16.dp), tint = PaidGreen)
-                        Spacer(Modifier.width(6.dp))
-                        Text("ADD PERSON", color = PaidGreen)
+                        Icon(Icons.Default.PersonAdd, null, modifier = Modifier.size(15.dp), tint = PaidGreen)
+                        Spacer(Modifier.width(4.dp))
+                        Text("ADD PERSON", color = PaidGreen, style = MaterialTheme.typography.labelSmall)
+                    }
+                    OutlinedButton(
+                        onClick = { showResetDialog = true },
+                        modifier = Modifier.weight(1f),
+                        border = ButtonDefaults.outlinedButtonBorder(enabled = true).copy(brush = SolidColor(Error.copy(alpha = 0.6f))),
+                        shape = RoundedCornerShape(10.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(containerColor = ErrorContainer.copy(alpha = 0.15f))
+                    ) {
+                        Icon(Icons.Default.RestartAlt, null, modifier = Modifier.size(15.dp), tint = Error)
+                        Spacer(Modifier.width(4.dp))
+                        Text("RESET", color = Error, style = MaterialTheme.typography.labelSmall)
                     }
                 }
             }
 
-            // Summary
+            // Summary with Progress Bar
             item {
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    MetricCard("TARGET", formatAmount(totalTarget), OnSurface, Modifier.weight(1f))
-                    MetricCard("COLLECTED", formatAmount(paidTotal), PaidGreen, Modifier.weight(1f))
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = CardDefaults.cardColors(containerColor = SurfaceVariant)
+                ) {
+                    Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(Modifier.weight(1f)) {
+                                Text("TARGET", style = MaterialTheme.typography.labelSmall, color = OnSurfaceVariant)
+                                Spacer(Modifier.height(2.dp))
+                                Text(formatAmount(totalTarget), style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold), color = OnSurface)
+                            }
+                            Column(Modifier.weight(1f)) {
+                                Text("COLLECTED", style = MaterialTheme.typography.labelSmall, color = OnSurfaceVariant)
+                                Spacer(Modifier.height(2.dp))
+                                Text(formatAmount(paidTotal), style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold), color = PaidGreen)
+                            }
+                            val paidCount = state.payments.values.count { it?.isPaid == true }
+                            Column(horizontalAlignment = Alignment.End) {
+                                Text("STATUS", style = MaterialTheme.typography.labelSmall, color = OnSurfaceVariant)
+                                Spacer(Modifier.height(2.dp))
+                                Text("$paidCount/${state.members.size} Paid", style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold), color = if (paidCount == state.members.size && state.members.isNotEmpty()) PaidGreen else Amber)
+                            }
+                        }
+                        val progress = if (totalTarget > 0) (paidTotal / totalTarget).toFloat().coerceIn(0f, 1f) else 0f
+                        LinearProgressIndicator(
+                            progress = { progress },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(6.dp)
+                                .clip(RoundedCornerShape(3.dp)),
+                            color = PaidGreen,
+                            trackColor = SurfaceContainer
+                        )
+                    }
                 }
             }
 
@@ -214,6 +271,9 @@ fun KittyDetailScreen(
                         onClick = {
                             selectedMember = member
                             showPaymentSheet = true
+                        },
+                        onTogglePaid = {
+                            viewModel.toggleMemberPaidStatus(member)
                         },
                         onEdit = {
                             editingMember = member
@@ -298,6 +358,34 @@ fun KittyDetailScreen(
                 )
                 showPayoutSheet = false
             }
+        )
+    }
+
+    // Reset all payments confirmation
+    if (showResetDialog) {
+        AlertDialog(
+            onDismissRequest = { showResetDialog = false },
+            icon = { Icon(Icons.Default.RestartAlt, contentDescription = null, tint = Error) },
+            title = { Text("Reset All Payments?", color = OnSurface) },
+            text = {
+                Text(
+                    "This will set all members' payment status to Unpaid for ${monthName(state.selectedMonth)} ${state.selectedYear}.\n\nAre you sure you want to proceed?",
+                    color = OnSurfaceVariant
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.resetAllPayments()
+                        showResetDialog = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Error)
+                ) { Text("Reset All to Unpaid", color = OnPrimary) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showResetDialog = false }) { Text("Cancel", color = OnSurfaceVariant) }
+            },
+            containerColor = SurfaceVariant
         )
     }
 
@@ -399,7 +487,7 @@ private fun PayoutSection(
                             modifier = Modifier.height(28.dp),
                             contentPadding = PaddingValues(horizontal = 8.dp),
                             shape = RoundedCornerShape(6.dp),
-                            border = ButtonDefaults.outlinedButtonBorder.copy(brush = SolidColor(Error))
+                            border = ButtonDefaults.outlinedButtonBorder(enabled = true).copy(brush = SolidColor(Error))
                         ) { Text("✕", style = MaterialTheme.typography.labelSmall, color = Error) }
                     }
                 }
@@ -571,6 +659,7 @@ private fun MemberPaymentCard(
     member: KittyMember,
     payment: KittyPayment?,
     onClick: () -> Unit,
+    onTogglePaid: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
     onViewHistory: () -> Unit
@@ -614,7 +703,10 @@ private fun MemberPaymentCard(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("Status:", style = MaterialTheme.typography.bodySmall, color = OnSurfaceVariant)
                     Spacer(Modifier.width(4.dp))
-                    StatusChip(payment?.isPaid == true)
+                    StatusChip(
+                        isPaid = payment?.isPaid == true,
+                        onClick = onTogglePaid
+                    )
                 }
                 if (payment?.paymentMode != null) {
                     Spacer(Modifier.height(4.dp))
@@ -639,6 +731,15 @@ private fun MemberPaymentCard(
                     Icon(Icons.Default.MoreVert, null, tint = OnSurfaceVariant, modifier = Modifier.size(18.dp))
                 }
                 DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }, containerColor = SurfaceVariant) {
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                if (payment?.isPaid == true) "Mark as Unpaid" else "Mark as Paid",
+                                color = if (payment?.isPaid == true) Error else PaidGreen
+                            )
+                        },
+                        onClick = { showMenu = false; onTogglePaid() }
+                    )
                     DropdownMenuItem(text = { Text("Edit Member", color = OnSurface) },
                         onClick = { showMenu = false; onEdit() })
                     DropdownMenuItem(text = { Text("Payment History", color = OnSurface) },
@@ -662,6 +763,7 @@ private fun PayoutEntrySheet(
     onDismiss: () -> Unit,
     onSave: (Long, Double, LocalDate?, String) -> Unit
 ) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var selectedHostId by remember {
         mutableStateOf(existingPayout?.hostMemberId ?: members.firstOrNull()?.id ?: 0L)
     }
@@ -673,17 +775,18 @@ private fun PayoutEntrySheet(
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
+        sheetState = sheetState,
         containerColor = SurfaceVariant,
-        shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
-        contentWindowInsets = { WindowInsets(0.dp) }
+        shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 20.dp)
                 .navigationBarsPadding()
                 .imePadding()
-                .padding(bottom = 16.dp),
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             Text("Record Payout — ${monthName(month)} $year",

@@ -54,6 +54,7 @@ class MainActivity : ComponentActivity() {
 
                 Scaffold(
                     containerColor = Background,
+                    contentWindowInsets = androidx.compose.foundation.layout.WindowInsets(0, 0, 0, 0),
                     bottomBar = {
                         if (showBottomBar) {
                             FinTrackBottomNavBar(navController)
@@ -62,7 +63,7 @@ class MainActivity : ComponentActivity() {
                 ) { innerPadding ->
                     FinTrackNavGraph(
                         navController = navController,
-                        bottomPadding = innerPadding
+                        bottomPadding = if (showBottomBar) innerPadding else androidx.compose.foundation.layout.PaddingValues()
                     )
                 }
             }

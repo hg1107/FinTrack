@@ -78,7 +78,10 @@ fun AddEditKittyScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
+                .navigationBarsPadding()
+                .imePadding()
                 .padding(horizontal = 16.dp),
+            contentPadding = PaddingValues(bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             item {

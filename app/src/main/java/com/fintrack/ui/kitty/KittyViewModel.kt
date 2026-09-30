@@ -152,8 +152,57 @@ class KittyViewModel @Inject constructor(
     fun selectKitty(kittyId: Long) {
         viewModelScope.launch {
             val kitty = repository.getKittyById(kittyId) ?: return@launch
+            val latestPayment = repository.getLatestPaymentForKitty(kittyId)
+            if (latestPayment != null) {
+                _uiState.update { it.copy(selectedMonth = latestPayment.month, selectedYear = latestPayment.year) }
+            }
             _uiState.update { it.copy(selectedKitty = kitty) }
             _selectedKittyId.value = kittyId
+        }
+    }
+
+    /**
+     * Resets all members' payment status to Unpaid for the currently active cycle.
+     * Removes associated ledger entries and marks every paid member as unpaid.
+     */
+    fun resetAllPayments() {
+        viewModelScope.launch {
+            val kittyId = _selectedKittyId.value ?: return@launch
+            val month = _uiState.value.selectedMonth
+            val year = _uiState.value.selectedYear
+            val existingPayments = repository.getPaymentsForKittyMonthSuspend(kittyId, month, year)
+
+            existingPayments.forEach { payment ->
+                if (payment.isPaid) {
+                    ledgerRepository.deleteEntryBySourceId(LedgerSourceType.KITTY_PAYMENT, payment.id)
+                }
+            }
+
+            repository.resetPaymentsForKittyMonth(kittyId, month, year)
+            _uiState.update { it.copy(snackbarMessage = "All payments reset to Unpaid") }
+        }
+    }
+
+    /**
+     * 1-Tap quick toggle between Paid and Unpaid directly from the member list card.
+     */
+    fun toggleMemberPaidStatus(member: KittyMember) {
+        viewModelScope.launch {
+            val month = _uiState.value.selectedMonth
+            val year = _uiState.value.selectedYear
+            val currentPayment = _uiState.value.payments[member.id]
+            val willBePaid = !(currentPayment?.isPaid == true)
+            upsertPayment(
+                memberId = member.id,
+                month = month,
+                year = year,
+                isPaid = willBePaid,
+                amountPaid = if (willBePaid) (currentPayment?.amountPaid?.takeIf { it > 0 } ?: member.amount) else 0.0,
+                datePaid = if (willBePaid) (currentPayment?.datePaid ?: LocalDate.now()) else null,
+                mode = if (willBePaid) (currentPayment?.paymentMode ?: PaymentMode.CASH) else null,
+                onlineAccount = if (willBePaid) currentPayment?.onlineAccountName else null,
+                note = currentPayment?.note
+            )
         }
     }
 

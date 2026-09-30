@@ -30,9 +30,16 @@ class KittyRepository @Inject constructor(private val dao: KittyDao) {
     fun getPaymentsForMember(memberId: Long): Flow<List<KittyPayment>> = dao.getPaymentsForMember(memberId)
     fun getPaymentsForKittyMonth(kittyId: Long, month: Int, year: Int): Flow<List<KittyPayment>> =
         dao.getPaymentsForKittyMonth(kittyId, month, year)
+    suspend fun getPaymentsForKittyMonthSuspend(kittyId: Long, month: Int, year: Int): List<KittyPayment> =
+        dao.getPaymentsForKittyMonthSuspend(kittyId, month, year)
+    suspend fun getLatestPaymentForKitty(kittyId: Long): KittyPayment? =
+        dao.getLatestPaymentForKitty(kittyId)
+    suspend fun resetPaymentsForKittyMonth(kittyId: Long, month: Int, year: Int) =
+        dao.resetPaymentsForKittyMonth(kittyId, month, year)
     suspend fun getPaymentForMemberMonth(memberId: Long, month: Int, year: Int): KittyPayment? =
         dao.getPaymentForMemberMonth(memberId, month, year)
     suspend fun upsertPayment(payment: KittyPayment): Long = dao.insertPayment(payment)
+    suspend fun updatePayment(payment: KittyPayment) = dao.updatePayment(payment)
 
     // Payouts
     fun getPayoutsForKitty(kittyId: Long): Flow<List<KittyPayout>> = dao.getPayoutsForKitty(kittyId)

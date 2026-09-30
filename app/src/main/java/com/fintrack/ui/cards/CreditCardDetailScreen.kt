@@ -6,6 +6,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -243,7 +244,7 @@ fun CreditCardDetailScreen(
             if (displayList.isEmpty()) {
                 item {
                     EmptyState(
-                        icon = Icons.Default.ReceiptLong,
+                        icon = Icons.AutoMirrored.Filled.ReceiptLong,
                         title = if (state.searchQuery.isBlank()) "No transactions" else "No results",
                         subtitle = if (state.searchQuery.isBlank()) "Tap + to log your first transaction" else "Try a different search or filter"
                     )

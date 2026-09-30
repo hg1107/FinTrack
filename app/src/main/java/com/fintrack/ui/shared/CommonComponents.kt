@@ -1,12 +1,17 @@
 package com.fintrack.ui.shared
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -15,6 +20,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -23,7 +29,6 @@ import java.text.NumberFormat
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
-import androidx.compose.material.icons.filled.Add
 
 // ─────────── Currency formatter (INR) ───────────
 val inrFormatter: NumberFormat = NumberFormat.getCurrencyInstance(Locale("en", "IN")).apply {
@@ -105,14 +110,22 @@ fun AmountText(
 
 // ─────────── Status Chip ───────────
 @Composable
-fun StatusChip(isPaid: Boolean) {
+fun StatusChip(
+    isPaid: Boolean,
+    modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null
+) {
     val bg = if (isPaid) PrimaryContainer else ErrorContainer
     val fg = if (isPaid) PaidGreen else UnpaidRed
     val label = if (isPaid) "Paid" else "Unpaid"
     Surface(
         shape = RoundedCornerShape(50),
         color = bg,
-        modifier = Modifier
+        modifier = if (onClick != null) {
+            modifier.clip(RoundedCornerShape(50)).clickable { onClick() }
+        } else {
+            modifier
+        }
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
@@ -125,7 +138,16 @@ fun StatusChip(isPaid: Boolean) {
                     .background(fg)
             )
             Spacer(Modifier.width(5.dp))
-            Text(label, style = MaterialTheme.typography.labelSmall, color = fg)
+            Text(label, style = MaterialTheme.typography.labelSmall, color = fg, fontWeight = FontWeight.SemiBold)
+            if (onClick != null) {
+                Spacer(Modifier.width(4.dp))
+                Icon(
+                    imageVector = if (isPaid) Icons.Default.Check else Icons.Default.Close,
+                    contentDescription = if (isPaid) "Click to mark Unpaid" else "Click to mark Paid",
+                    tint = fg,
+                    modifier = Modifier.size(11.dp)
+                )
+            }
         }
     }
 }
@@ -181,7 +203,9 @@ fun AmountInputField(
     onValueChange: (String) -> Unit,
     label: String = "Amount",
     modifier: Modifier = Modifier,
-    isError: Boolean = false
+    isError: Boolean = false,
+    imeAction: ImeAction = ImeAction.Done,
+    keyboardActions: KeyboardActions = KeyboardActions.Default
 ) {
     OutlinedTextField(
         value = value,
@@ -192,8 +216,10 @@ fun AmountInputField(
         },
         label = { Text(label) },
         prefix = { Text("₹", color = OnSurfaceVariant) },
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = imeAction),
+        keyboardActions = keyboardActions,
         isError = isError,
+        singleLine = true,
         modifier = modifier.fillMaxWidth(),
         colors = OutlinedTextFieldDefaults.colors(
             focusedBorderColor = Primary,

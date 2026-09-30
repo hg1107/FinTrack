@@ -34,20 +34,22 @@ fun AddEditTransactionSheet(
     var note by remember { mutableStateOf(existingNote) }
     var amountError by remember { mutableStateOf(false) }
 
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
     ModalBottomSheet(
         onDismissRequest = onDismiss,
+        sheetState = sheetState,
         containerColor = SurfaceVariant,
-        shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
-        contentWindowInsets = { WindowInsets(0.dp) }
+        shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 20.dp)
                 .navigationBarsPadding()
                 .imePadding()
-                .padding(bottom = 16.dp)
-                .verticalScroll(rememberScrollState()),
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             Text(

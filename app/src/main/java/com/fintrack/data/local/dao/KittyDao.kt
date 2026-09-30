@@ -60,6 +60,29 @@ interface KittyDao {
     """)
     fun getPaymentsForKittyMonth(kittyId: Long, month: Int, year: Int): Flow<List<KittyPayment>>
 
+    @Query("""
+        SELECT * FROM kitty_payments 
+        WHERE memberId IN (SELECT id FROM kitty_members WHERE kittyId = :kittyId)
+        AND month = :month AND year = :year
+    """)
+    suspend fun getPaymentsForKittyMonthSuspend(kittyId: Long, month: Int, year: Int): List<KittyPayment>
+
+    @Query("""
+        SELECT * FROM kitty_payments 
+        WHERE memberId IN (SELECT id FROM kitty_members WHERE kittyId = :kittyId)
+        AND isPaid = 1
+        ORDER BY year DESC, month DESC LIMIT 1
+    """)
+    suspend fun getLatestPaymentForKitty(kittyId: Long): KittyPayment?
+
+    @Query("""
+        UPDATE kitty_payments 
+        SET isPaid = 0, amountPaid = 0.0, datePaid = NULL, paymentMode = NULL, onlineAccountName = NULL, note = NULL
+        WHERE memberId IN (SELECT id FROM kitty_members WHERE kittyId = :kittyId)
+        AND month = :month AND year = :year
+    """)
+    suspend fun resetPaymentsForKittyMonth(kittyId: Long, month: Int, year: Int)
+
     @Query("SELECT * FROM kitty_payments WHERE memberId = :memberId AND month = :month AND year = :year LIMIT 1")
     suspend fun getPaymentForMemberMonth(memberId: Long, month: Int, year: Int): KittyPayment?
 

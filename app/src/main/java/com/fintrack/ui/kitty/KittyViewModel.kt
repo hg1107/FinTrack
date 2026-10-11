@@ -24,8 +24,9 @@ import kotlinx.coroutines.launch
 import java.time.LocalDate
 import javax.inject.Inject
 
-// ─── Sort options for the member list ───
+// ─── Sort and filter options for the member list ───
 enum class KittySort { NAME, HOST_MONTH, PAID_STATUS }
+enum class KittyPaymentFilter { ALL, PAID, PENDING }
 
 data class KittyUiState(
     val kitties: List<Kitty> = emptyList(),
@@ -40,6 +41,8 @@ data class KittyUiState(
     val errorMessage: String? = null,
     val snackbarMessage: String? = null,
     val searchQuery: String = "",
+    val memberSearchQuery: String = "",
+    val filterStatus: KittyPaymentFilter = KittyPaymentFilter.ALL,
     val sortOrder: KittySort = KittySort.HOST_MONTH
 )
 
@@ -125,14 +128,27 @@ class KittyViewModel @Inject constructor(
         else state.kitties.filter { it.name.contains(state.searchQuery, ignoreCase = true) }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    /** Members sorted according to the selected sort order */
+    /** Members sorted and filtered according to user selection and search query */
     val sortedMembers: StateFlow<List<KittyMember>> = uiState.map { state ->
         val members = state.members
         val payments = state.payments
+        val query = state.memberSearchQuery.trim().lowercase()
+
+        val filtered = members.filter { member ->
+            val matchesSearch = query.isEmpty() || member.name.lowercase().contains(query)
+            val isPaid = payments[member.id]?.isPaid == true
+            val matchesFilter = when (state.filterStatus) {
+                KittyPaymentFilter.ALL -> true
+                KittyPaymentFilter.PAID -> isPaid
+                KittyPaymentFilter.PENDING -> !isPaid
+            }
+            matchesSearch && matchesFilter
+        }
+
         when (state.sortOrder) {
-            KittySort.NAME      -> members.sortedBy { it.name.lowercase() }
-            KittySort.HOST_MONTH -> members.sortedBy { it.hostMonth }
-            KittySort.PAID_STATUS -> members.sortedWith(
+            KittySort.NAME      -> filtered.sortedBy { it.name.lowercase() }
+            KittySort.HOST_MONTH -> filtered.sortedBy { it.hostMonth }
+            KittySort.PAID_STATUS -> filtered.sortedWith(
                 compareBy({ payments[it.id]?.isPaid == true }, { it.name.lowercase() })
             )
         }
@@ -144,6 +160,10 @@ class KittyViewModel @Inject constructor(
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     fun setSearchQuery(q: String) = _uiState.update { it.copy(searchQuery = q) }
+
+    fun setMemberSearchQuery(q: String) = _uiState.update { it.copy(memberSearchQuery = q) }
+
+    fun setFilterStatus(filter: KittyPaymentFilter) = _uiState.update { it.copy(filterStatus = filter) }
 
     fun setSortOrder(sort: KittySort) = _uiState.update { it.copy(sortOrder = sort) }
 
@@ -163,7 +183,8 @@ class KittyViewModel @Inject constructor(
 
     /**
      * Resets all members' payment status to Unpaid for the currently active cycle.
-     * Removes associated ledger entries and marks every paid member as unpaid.
+     * Removes associated ledger entries, marks every paid member as unpaid,
+     * and preserves each member's monthly contribution amount.
      */
     fun resetAllPayments() {
         viewModelScope.launch {
@@ -179,12 +200,48 @@ class KittyViewModel @Inject constructor(
             }
 
             repository.resetPaymentsForKittyMonth(kittyId, month, year)
+            repository.restoreZeroPaymentAmountsForKittyMonth(kittyId, month, year)
             _uiState.update { it.copy(snackbarMessage = "All payments reset to Unpaid") }
         }
     }
 
     /**
+     * Batch-marks all unpaid members as Paid for the selected month with the chosen payment mode.
+     */
+    fun markAllAsPaid(mode: PaymentMode = PaymentMode.CASH) {
+        viewModelScope.launch {
+            val kittyId = _selectedKittyId.value ?: return@launch
+            val month = _uiState.value.selectedMonth
+            val year = _uiState.value.selectedYear
+            val members = _uiState.value.members
+
+            val unpaidMembers = members.filter { _uiState.value.payments[it.id]?.isPaid != true }
+            if (unpaidMembers.isEmpty()) {
+                _uiState.update { it.copy(snackbarMessage = "All members are already marked as Paid") }
+                return@launch
+            }
+
+            unpaidMembers.forEach { member ->
+                val currentPayment = _uiState.value.payments[member.id]
+                upsertPayment(
+                    memberId = member.id,
+                    month = month,
+                    year = year,
+                    isPaid = true,
+                    amountPaid = currentPayment?.amountPaid?.takeIf { it > 0 } ?: member.amount,
+                    datePaid = LocalDate.now(),
+                    mode = mode,
+                    onlineAccount = null,
+                    note = currentPayment?.note
+                )
+            }
+            _uiState.update { it.copy(snackbarMessage = "Marked ${unpaidMembers.size} member${if (unpaidMembers.size > 1) "s" else ""} as Paid via ${mode.name}") }
+        }
+    }
+
+    /**
      * 1-Tap quick toggle between Paid and Unpaid directly from the member list card.
+     * Always preserves the member's amount when setting to Unpaid.
      */
     fun toggleMemberPaidStatus(member: KittyMember) {
         viewModelScope.launch {
@@ -197,7 +254,7 @@ class KittyViewModel @Inject constructor(
                 month = month,
                 year = year,
                 isPaid = willBePaid,
-                amountPaid = if (willBePaid) (currentPayment?.amountPaid?.takeIf { it > 0 } ?: member.amount) else 0.0,
+                amountPaid = currentPayment?.amountPaid?.takeIf { it > 0 } ?: member.amount,
                 datePaid = if (willBePaid) (currentPayment?.datePaid ?: LocalDate.now()) else null,
                 mode = if (willBePaid) (currentPayment?.paymentMode ?: PaymentMode.CASH) else null,
                 onlineAccount = if (willBePaid) currentPayment?.onlineAccountName else null,

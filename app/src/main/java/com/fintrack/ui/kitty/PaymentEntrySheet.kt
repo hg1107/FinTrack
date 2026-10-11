@@ -20,6 +20,11 @@ import com.fintrack.ui.shared.*
 import com.fintrack.ui.theme.*
 import java.time.LocalDate
 
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.material.icons.filled.*
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+
 // ─────────── Payment Entry Bottom Sheet ───────────
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -29,11 +34,12 @@ fun PaymentEntrySheet(
     month: Int,
     year: Int,
     accounts: List<BankAccount> = emptyList(),
+    hosts: List<KittyMember> = emptyList(),
     onDismiss: () -> Unit,
     onSave: (Boolean, Double, LocalDate?, PaymentMode?, String?, String?) -> Unit
 ) {
     var isPaid by remember { mutableStateOf(existingPayment?.isPaid ?: false) }
-    var amountStr by remember { mutableStateOf(existingPayment?.amountPaid?.toString() ?: member.amount.toString()) }
+    var amountStr by remember { mutableStateOf((existingPayment?.amountPaid?.takeIf { it > 0 } ?: member.amount).toString()) }
     var datePaid by remember { mutableStateOf(existingPayment?.datePaid ?: LocalDate.now()) }
     var selectedMode by remember { mutableStateOf(existingPayment?.paymentMode ?: PaymentMode.CASH) }
     var onlineAccount by remember { mutableStateOf(existingPayment?.onlineAccountName ?: "") }
@@ -85,7 +91,7 @@ fun PaymentEntrySheet(
             AmountInputField(
                 value = amountStr,
                 onValueChange = { amountStr = it; amountError = false },
-                label = "Amount Paid",
+                label = "Amount",
                 isError = amountError
             )
             if (amountError) Text("Enter a valid amount", style = MaterialTheme.typography.bodySmall, color = Error)
@@ -94,21 +100,132 @@ fun PaymentEntrySheet(
 
             // Payment mode selector
             Text("Payment Mode", style = MaterialTheme.typography.titleMedium, color = OnSurface)
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
                 PaymentMode.entries.forEach { mode ->
                     val isSelected = selectedMode == mode
+                    val label = when (mode) {
+                        PaymentMode.CASH -> "Cash"
+                        PaymentMode.ONLINE -> "Online"
+                        PaymentMode.OFFICE -> "Office"
+                        PaymentMode.HOST -> "Host"
+                        PaymentMode.SELF -> "Self"
+                    }
                     FilterChip(
                         selected = isSelected,
                         onClick = { selectedMode = mode },
-                        label = { Text(mode.name) },
+                        label = { Text(label, fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal) },
                         colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = PrimaryContainer,
-                            selectedLabelColor = PaidGreen,
+                            selectedContainerColor = when (mode) {
+                                PaymentMode.CASH -> PrimaryContainer
+                                PaymentMode.ONLINE -> Color(0xFF1E3A8A)
+                                PaymentMode.OFFICE -> Color(0xFF312E81)
+                                PaymentMode.HOST -> AmberContainer
+                                PaymentMode.SELF -> Color(0xFF134E4A)
+                            },
+                            selectedLabelColor = when (mode) {
+                                PaymentMode.CASH -> PaidGreen
+                                PaymentMode.ONLINE -> Color(0xFF60A5FA)
+                                PaymentMode.OFFICE -> Color(0xFFA78BFA)
+                                PaymentMode.HOST -> Amber
+                                PaymentMode.SELF -> Color(0xFF2DD4BF)
+                            },
                             containerColor = SurfaceContainer,
                             labelColor = OnSurfaceVariant
                         )
                     )
                 }
+            }
+
+            // Informational helper boxes based on selected mode
+            when (selectedMode) {
+                PaymentMode.HOST -> {
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = AmberContainer.copy(alpha = 0.5f),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(Icons.Default.Star, contentDescription = null, tint = Amber, modifier = Modifier.size(18.dp))
+                            val hostNames = hosts.map { it.name }.filter { it.isNotBlank() }
+                            Text(
+                                text = if (hostNames.isNotEmpty()) "Paid directly to host: ${hostNames.joinToString(", ")}"
+                                       else "Paid directly to this month's host",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = OnSurface
+                            )
+                        }
+                    }
+                }
+                PaymentMode.SELF -> {
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = Color(0xFF134E4A).copy(alpha = 0.5f),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(Icons.Default.Person, contentDescription = null, tint = Color(0xFF2DD4BF), modifier = Modifier.size(18.dp))
+                            Text(
+                                text = "Self payment / host self-adjustment for ${monthName(month)} $year",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = OnSurface
+                            )
+                        }
+                    }
+                }
+                PaymentMode.OFFICE -> {
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = Color(0xFF312E81).copy(alpha = 0.4f),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(Icons.Default.Business, contentDescription = null, tint = Color(0xFFA78BFA), modifier = Modifier.size(18.dp))
+                            Text(
+                                text = "Payment recorded under Raj Office ledger",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = OnSurface
+                            )
+                        }
+                    }
+                }
+                PaymentMode.CASH -> {
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = PrimaryContainer.copy(alpha = 0.35f),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(Icons.Default.Payments, contentDescription = null, tint = PaidGreen, modifier = Modifier.size(18.dp))
+                            Text(
+                                text = "Cash payment recorded under Cash ledger",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = OnSurface
+                            )
+                        }
+                    }
+                }
+                PaymentMode.ONLINE -> { /* Handled below by bank account / UPI field */ }
             }
 
             if (selectedMode == PaymentMode.ONLINE) {

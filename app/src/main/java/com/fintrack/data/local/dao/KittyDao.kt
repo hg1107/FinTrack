@@ -77,11 +77,20 @@ interface KittyDao {
 
     @Query("""
         UPDATE kitty_payments 
-        SET isPaid = 0, amountPaid = 0.0, datePaid = NULL, paymentMode = NULL, onlineAccountName = NULL, note = NULL
+        SET isPaid = 0, datePaid = NULL, paymentMode = NULL, onlineAccountName = NULL, note = NULL
         WHERE memberId IN (SELECT id FROM kitty_members WHERE kittyId = :kittyId)
         AND month = :month AND year = :year
     """)
     suspend fun resetPaymentsForKittyMonth(kittyId: Long, month: Int, year: Int)
+
+    @Query("""
+        UPDATE kitty_payments 
+        SET amountPaid = (SELECT amount FROM kitty_members WHERE kitty_members.id = kitty_payments.memberId)
+        WHERE memberId IN (SELECT id FROM kitty_members WHERE kittyId = :kittyId)
+        AND month = :month AND year = :year
+        AND (amountPaid IS NULL OR amountPaid <= 0.0)
+    """)
+    suspend fun restoreZeroPaymentAmountsForKittyMonth(kittyId: Long, month: Int, year: Int)
 
     @Query("SELECT * FROM kitty_payments WHERE memberId = :memberId AND month = :month AND year = :year LIMIT 1")
     suspend fun getPaymentForMemberMonth(memberId: Long, month: Int, year: Int): KittyPayment?

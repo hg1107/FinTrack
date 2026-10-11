@@ -155,14 +155,23 @@ fun StatusChip(
 // ─────────── Payment Mode Chip ───────────
 @Composable
 fun ModeChip(mode: String) {
+    val cleanMode = mode.trim().uppercase()
+    val (bgColor, textColor, label) = when (cleanMode) {
+        "CASH" -> Triple(PaidGreen.copy(alpha = 0.15f), PaidGreen, "Cash")
+        "ONLINE" -> Triple(Color(0xFF3B82F6).copy(alpha = 0.15f), Color(0xFF60A5FA), "Online")
+        "OFFICE" -> Triple(Color(0xFF8B5CF6).copy(alpha = 0.15f), Color(0xFFA78BFA), "Office")
+        "HOST" -> Triple(Amber.copy(alpha = 0.18f), Amber, "Host")
+        "SELF" -> Triple(Color(0xFF14B8A6).copy(alpha = 0.18f), Color(0xFF2DD4BF), "Self")
+        else -> Triple(SurfaceContainer, OnSurfaceVariant, mode)
+    }
     Surface(
         shape = RoundedCornerShape(50),
-        color = SurfaceContainer
+        color = bgColor
     ) {
         Text(
-            text = mode,
-            style = MaterialTheme.typography.labelSmall,
-            color = OnSurfaceVariant,
+            text = label,
+            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
+            color = textColor,
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
         )
     }

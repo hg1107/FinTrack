@@ -6,7 +6,7 @@ import androidx.room.Index
 import androidx.room.PrimaryKey
 import java.time.LocalDate
 
-enum class PaymentMode { OFFICE, ONLINE, CASH }
+enum class PaymentMode { OFFICE, ONLINE, CASH, HOST, SELF }
 
 @Entity(
     tableName = "kitty_payments",

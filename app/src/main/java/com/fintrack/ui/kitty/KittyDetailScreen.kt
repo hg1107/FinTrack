@@ -1,4 +1,9 @@
 package com.fintrack.ui.kitty
+import android.content.Context
+import android.content.Intent
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.foundation.horizontalScroll
+import com.fintrack.data.local.entity.PaymentMode
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -53,8 +58,12 @@ fun KittyDetailScreen(
         }
     }
 
+    val context = LocalContext.current
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showResetDialog by remember { mutableStateOf(false) }
+    var showMarkAllPaidDialog by remember { mutableStateOf(false) }
+    var markAllPaidMode by remember { mutableStateOf(PaymentMode.CASH) }
+    var showSearchBar by remember { mutableStateOf(false) }
     var showPaymentSheet by remember { mutableStateOf(false) }
     var selectedMember by remember { mutableStateOf<KittyMember?>(null) }
     var showAddMemberSheet by remember { mutableStateOf(false) }
@@ -86,13 +95,60 @@ fun KittyDetailScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text(kitty.name, style = MaterialTheme.typography.headlineMedium, color = OnSurface) },
+                title = {
+                    if (showSearchBar) {
+                        OutlinedTextField(
+                            value = state.memberSearchQuery,
+                            onValueChange = viewModel::setMemberSearchQuery,
+                            placeholder = { Text("Search members...", color = OnSurfaceVariant, style = MaterialTheme.typography.bodyMedium) },
+                            singleLine = true,
+                            trailingIcon = {
+                                IconButton(onClick = {
+                                    if (state.memberSearchQuery.isNotEmpty()) viewModel.setMemberSearchQuery("")
+                                    else showSearchBar = false
+                                }) {
+                                    Icon(Icons.Default.Close, null, tint = OnSurface)
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth().padding(end = 8.dp),
+                            shape = RoundedCornerShape(10.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = Primary,
+                                unfocusedBorderColor = Outline,
+                                focusedTextColor = OnSurface,
+                                unfocusedTextColor = OnSurface
+                            )
+                        )
+                    } else {
+                        Text(kitty.name, style = MaterialTheme.typography.headlineMedium, color = OnSurface)
+                    }
+                },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, null, tint = OnSurface)
                     }
                 },
                 actions = {
+                    if (!showSearchBar) {
+                        IconButton(onClick = { showSearchBar = true }) {
+                            Icon(Icons.Default.Search, "Search Members", tint = OnSurface)
+                        }
+                        IconButton(onClick = {
+                            shareKittyStatus(
+                                context = context,
+                                kittyName = kitty.name,
+                                month = state.selectedMonth,
+                                year = state.selectedYear,
+                                target = totalTarget,
+                                collected = paidTotal,
+                                members = state.members,
+                                payments = state.payments,
+                                hosts = hostsForMonth
+                            )
+                        }) {
+                            Icon(Icons.Default.Share, "Share Status", tint = OnSurface)
+                        }
+                    }
                     var menuExpanded by remember { mutableStateOf(false) }
                     IconButton(onClick = { menuExpanded = true }) {
                         Icon(Icons.Default.MoreVert, null, tint = OnSurface)
@@ -103,14 +159,40 @@ fun KittyDetailScreen(
                         containerColor = SurfaceVariant
                     ) {
                         DropdownMenuItem(
+                            leadingIcon = { Icon(Icons.Default.CheckCircle, null, tint = PaidGreen) },
+                            text = { Text("Mark All as Paid", color = PaidGreen) },
+                            onClick = { menuExpanded = false; showMarkAllPaidDialog = true }
+                        )
+                        DropdownMenuItem(
+                            leadingIcon = { Icon(Icons.Default.Share, null, tint = OnSurface) },
+                            text = { Text("Share Status Report", color = OnSurface) },
+                            onClick = {
+                                menuExpanded = false
+                                shareKittyStatus(
+                                    context = context,
+                                    kittyName = kitty.name,
+                                    month = state.selectedMonth,
+                                    year = state.selectedYear,
+                                    target = totalTarget,
+                                    collected = paidTotal,
+                                    members = state.members,
+                                    payments = state.payments,
+                                    hosts = hostsForMonth
+                                )
+                            }
+                        )
+                        DropdownMenuItem(
+                            leadingIcon = { Icon(Icons.Default.Edit, null, tint = OnSurface) },
                             text = { Text("Edit Kitty", color = OnSurface) },
                             onClick = { menuExpanded = false; onNavigateToEdit(kitty.id) }
                         )
                         DropdownMenuItem(
+                            leadingIcon = { Icon(Icons.Default.RestartAlt, null, tint = Error) },
                             text = { Text("Reset All to Unpaid", color = Error) },
                             onClick = { menuExpanded = false; showResetDialog = true }
                         )
                         DropdownMenuItem(
+                            leadingIcon = { Icon(Icons.Default.Delete, null, tint = Error) },
                             text = { Text("Delete Kitty", color = Error) },
                             onClick = { menuExpanded = false; showDeleteDialog = true }
                         )
@@ -141,45 +223,62 @@ fun KittyDetailScreen(
 
             // Action buttons
             item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    OutlinedButton(
-                        onClick = { onNavigateToEdit(kitty.id) },
-                        modifier = Modifier.weight(1f),
-                        border = ButtonDefaults.outlinedButtonBorder(enabled = true).copy(brush = SolidColor(Outline)),
-                        shape = RoundedCornerShape(10.dp)
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Icon(Icons.Default.Edit, null, modifier = Modifier.size(15.dp), tint = OnSurface)
-                        Spacer(Modifier.width(4.dp))
-                        Text("EDIT", color = OnSurface, style = MaterialTheme.typography.labelSmall)
+                        OutlinedButton(
+                            onClick = { onNavigateToEdit(kitty.id) },
+                            modifier = Modifier.weight(1f),
+                            border = ButtonDefaults.outlinedButtonBorder(enabled = true).copy(brush = SolidColor(Outline)),
+                            shape = RoundedCornerShape(10.dp)
+                        ) {
+                            Icon(Icons.Default.Edit, null, modifier = Modifier.size(15.dp), tint = OnSurface)
+                            Spacer(Modifier.width(4.dp))
+                            Text("EDIT", color = OnSurface, style = MaterialTheme.typography.labelSmall)
+                        }
+                        Button(
+                            onClick = { editingMember = null; showAddMemberSheet = true },
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.buttonColors(containerColor = PrimaryContainer),
+                            shape = RoundedCornerShape(10.dp)
+                        ) {
+                            Icon(Icons.Default.PersonAdd, null, modifier = Modifier.size(15.dp), tint = PaidGreen)
+                            Spacer(Modifier.width(4.dp))
+                            Text("ADD PERSON", color = PaidGreen, style = MaterialTheme.typography.labelSmall)
+                        }
                     }
-                    Button(
-                        onClick = { editingMember = null; showAddMemberSheet = true },
-                        modifier = Modifier.weight(1.2f),
-                        colors = ButtonDefaults.buttonColors(containerColor = PrimaryContainer),
-                        shape = RoundedCornerShape(10.dp)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Icon(Icons.Default.PersonAdd, null, modifier = Modifier.size(15.dp), tint = PaidGreen)
-                        Spacer(Modifier.width(4.dp))
-                        Text("ADD PERSON", color = PaidGreen, style = MaterialTheme.typography.labelSmall)
-                    }
-                    OutlinedButton(
-                        onClick = { showResetDialog = true },
-                        modifier = Modifier.weight(1f),
-                        border = ButtonDefaults.outlinedButtonBorder(enabled = true).copy(brush = SolidColor(Error.copy(alpha = 0.6f))),
-                        shape = RoundedCornerShape(10.dp),
-                        colors = ButtonDefaults.outlinedButtonColors(containerColor = ErrorContainer.copy(alpha = 0.15f))
-                    ) {
-                        Icon(Icons.Default.RestartAlt, null, modifier = Modifier.size(15.dp), tint = Error)
-                        Spacer(Modifier.width(4.dp))
-                        Text("RESET", color = Error, style = MaterialTheme.typography.labelSmall)
+                        Button(
+                            onClick = { showMarkAllPaidDialog = true },
+                            modifier = Modifier.weight(1.2f),
+                            colors = ButtonDefaults.buttonColors(containerColor = PaidGreen.copy(alpha = 0.2f)),
+                            shape = RoundedCornerShape(10.dp)
+                        ) {
+                            Icon(Icons.Default.CheckCircle, null, modifier = Modifier.size(15.dp), tint = PaidGreen)
+                            Spacer(Modifier.width(4.dp))
+                            Text("MARK ALL PAID", color = PaidGreen, style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold))
+                        }
+                        OutlinedButton(
+                            onClick = { showResetDialog = true },
+                            modifier = Modifier.weight(1f),
+                            border = ButtonDefaults.outlinedButtonBorder(enabled = true).copy(brush = SolidColor(Error.copy(alpha = 0.6f))),
+                            shape = RoundedCornerShape(10.dp),
+                            colors = ButtonDefaults.outlinedButtonColors(containerColor = ErrorContainer.copy(alpha = 0.15f))
+                        ) {
+                            Icon(Icons.Default.RestartAlt, null, modifier = Modifier.size(15.dp), tint = Error)
+                            Spacer(Modifier.width(4.dp))
+                            Text("RESET", color = Error, style = MaterialTheme.typography.labelSmall)
+                        }
                     }
                 }
             }
 
-            // Summary with Progress Bar
+            // Summary with Progress Bar & Collection Breakdown
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
@@ -219,6 +318,44 @@ fun KittyDetailScreen(
                             color = PaidGreen,
                             trackColor = SurfaceContainer
                         )
+
+                        // Mode Breakdown (Cash, Online, Office, Host, Self)
+                        val paidPayments = state.payments.values.filterNotNull().filter { it.isPaid }
+                        val modeTotals = PaymentMode.entries.mapNotNull { mode ->
+                            val sum = paidPayments.filter { it.paymentMode == mode }.sumOf { it.amountPaid }
+                            if (sum > 0) mode to sum else null
+                        }
+                        if (modeTotals.isNotEmpty()) {
+                            HorizontalDivider(color = Outline.copy(alpha = 0.5f), thickness = 0.5.dp)
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .horizontalScroll(rememberScrollState()),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text("By Mode:", style = MaterialTheme.typography.labelSmall, color = OnSurfaceVariant)
+                                modeTotals.forEach { (mode, sum) ->
+                                    Surface(
+                                        shape = RoundedCornerShape(8.dp),
+                                        color = SurfaceContainer
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                        ) {
+                                            ModeChip(mode.name)
+                                            Text(
+                                                formatAmount(sum),
+                                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                                color = OnSurface
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -245,12 +382,52 @@ fun KittyDetailScreen(
                 )
             }
 
-            // Sort chips
+            // Filter & Sort chips
             item {
-                SortChipRow(
-                    currentSort = state.sortOrder,
-                    onSortSelected = viewModel::setSortOrder
-                )
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    val paidCount = state.payments.values.count { it?.isPaid == true }
+                    val pendingCount = state.members.size - paidCount
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Filter:", style = MaterialTheme.typography.labelSmall, color = OnSurfaceVariant)
+                        listOf(
+                            KittyPaymentFilter.ALL to "All (${state.members.size})",
+                            KittyPaymentFilter.PAID to "Paid ($paidCount)",
+                            KittyPaymentFilter.PENDING to "Pending ($pendingCount)"
+                        ).forEach { (filter, label) ->
+                            FilterChip(
+                                selected = state.filterStatus == filter,
+                                onClick = { viewModel.setFilterStatus(filter) },
+                                label = { Text(label, style = MaterialTheme.typography.labelSmall) },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = when (filter) {
+                                        KittyPaymentFilter.PAID -> PaidGreen.copy(alpha = 0.2f)
+                                        KittyPaymentFilter.PENDING -> Amber.copy(alpha = 0.2f)
+                                        else -> PrimaryContainer
+                                    },
+                                    selectedLabelColor = when (filter) {
+                                        KittyPaymentFilter.PAID -> PaidGreen
+                                        KittyPaymentFilter.PENDING -> Amber
+                                        else -> PaidGreen
+                                    },
+                                    containerColor = SurfaceContainer,
+                                    labelColor = OnSurfaceVariant
+                                )
+                            )
+                        }
+                    }
+
+                    SortChipRow(
+                        currentSort = state.sortOrder,
+                        onSortSelected = viewModel::setSortOrder
+                    )
+                }
             }
 
             // Member list
@@ -301,6 +478,7 @@ fun KittyDetailScreen(
             month = state.selectedMonth,
             year = state.selectedYear,
             accounts = allAccounts,
+            hosts = hostsForMonth,
             onDismiss = { showPaymentSheet = false },
             onSave = { isPaid, amount, date, mode, onlineAccount, note ->
                 viewModel.upsertPayment(
@@ -361,6 +539,65 @@ fun KittyDetailScreen(
         )
     }
 
+    // Mark all as paid confirmation
+    if (showMarkAllPaidDialog) {
+        val unpaidCount = state.members.count { state.payments[it.id]?.isPaid != true }
+        AlertDialog(
+            onDismissRequest = { showMarkAllPaidDialog = false },
+            icon = { Icon(Icons.Default.CheckCircle, contentDescription = null, tint = PaidGreen) },
+            title = { Text("Mark All as Paid?", color = OnSurface) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(
+                        "Mark all $unpaidCount unpaid members as Paid for ${monthName(state.selectedMonth)} ${state.selectedYear}.\n\nSelect payment mode:",
+                        color = OnSurfaceVariant
+                    )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        PaymentMode.entries.forEach { mode ->
+                            val isSelected = markAllPaidMode == mode
+                            val label = when (mode) {
+                                PaymentMode.CASH -> "Cash"
+                                PaymentMode.ONLINE -> "Online"
+                                PaymentMode.OFFICE -> "Office"
+                                PaymentMode.HOST -> "Host"
+                                PaymentMode.SELF -> "Self"
+                            }
+                            FilterChip(
+                                selected = isSelected,
+                                onClick = { markAllPaidMode = mode },
+                                label = { Text(label, style = MaterialTheme.typography.labelSmall) },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = PrimaryContainer,
+                                    selectedLabelColor = PaidGreen,
+                                    containerColor = SurfaceContainer,
+                                    labelColor = OnSurfaceVariant
+                                )
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.markAllAsPaid(markAllPaidMode)
+                        showMarkAllPaidDialog = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Primary)
+                ) { Text("Confirm Paid", color = OnPrimary) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showMarkAllPaidDialog = false }) { Text("Cancel", color = OnSurfaceVariant) }
+            },
+            containerColor = SurfaceVariant
+        )
+    }
+
     // Reset all payments confirmation
     if (showResetDialog) {
         AlertDialog(
@@ -369,7 +606,7 @@ fun KittyDetailScreen(
             title = { Text("Reset All Payments?", color = OnSurface) },
             text = {
                 Text(
-                    "This will set all members' payment status to Unpaid for ${monthName(state.selectedMonth)} ${state.selectedYear}.\n\nAre you sure you want to proceed?",
+                    "This will set all members' payment status to Unpaid for ${monthName(state.selectedMonth)} ${state.selectedYear}.\n\nEach member's contribution amount will be kept intact.\n\nAre you sure you want to proceed?",
                     color = OnSurfaceVariant
                 )
             },
@@ -538,38 +775,80 @@ private fun MonthYearSelector(
 ) {
     var expanded by remember { mutableStateOf(false) }
     val displayText = "${monthName(selectedMonth)} $selectedYear"
+    val currentIndex = months.indexOfFirst { it.first == selectedMonth && it.second == selectedYear }
 
-    ExposedDropdownMenuBox(
-        expanded = expanded,
-        onExpandedChange = { expanded = it }
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-        OutlinedTextField(
-            value = displayText,
-            onValueChange = {},
-            readOnly = true,
-            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-            modifier = Modifier
-                .fillMaxWidth()
-                .menuAnchor(MenuAnchorType.PrimaryNotEditable),
-            shape = RoundedCornerShape(12.dp),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = Primary,
-                unfocusedBorderColor = Outline,
-                focusedTextColor = OnSurface,
-                unfocusedTextColor = OnSurface
-            )
-        )
-        ExposedDropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false },
-            containerColor = SurfaceVariant
+        IconButton(
+            onClick = {
+                if (currentIndex > 0) {
+                    val (prevM, prevY) = months[currentIndex - 1]
+                    onSelect(prevM, prevY)
+                }
+            },
+            enabled = currentIndex > 0
         ) {
-            months.forEach { (m, y) ->
-                DropdownMenuItem(
-                    text = { Text("${monthName(m)} $y", color = OnSurface) },
-                    onClick = { onSelect(m, y); expanded = false }
+            Icon(
+                Icons.Default.ChevronLeft,
+                contentDescription = "Previous Month",
+                tint = if (currentIndex > 0) OnSurface else OnSurfaceVariant.copy(alpha = 0.3f)
+            )
+        }
+
+        Box(modifier = Modifier.weight(1f)) {
+            ExposedDropdownMenuBox(
+                expanded = expanded,
+                onExpandedChange = { expanded = it }
+            ) {
+                OutlinedTextField(
+                    value = displayText,
+                    onValueChange = {},
+                    readOnly = true,
+                    leadingIcon = { Icon(Icons.Default.CalendarMonth, null, tint = Primary, modifier = Modifier.size(18.dp)) },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .menuAnchor(MenuAnchorType.PrimaryNotEditable),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = Primary,
+                        unfocusedBorderColor = Outline,
+                        focusedTextColor = OnSurface,
+                        unfocusedTextColor = OnSurface
+                    )
                 )
+                ExposedDropdownMenu(
+                    expanded = expanded,
+                    onDismissRequest = { expanded = false },
+                    containerColor = SurfaceVariant
+                ) {
+                    months.forEach { (m, y) ->
+                        DropdownMenuItem(
+                            text = { Text("${monthName(m)} $y", color = OnSurface) },
+                            onClick = { onSelect(m, y); expanded = false }
+                        )
+                    }
+                }
             }
+        }
+
+        IconButton(
+            onClick = {
+                if (currentIndex in 0 until months.size - 1) {
+                    val (nextM, nextY) = months[currentIndex + 1]
+                    onSelect(nextM, nextY)
+                }
+            },
+            enabled = currentIndex in 0 until months.size - 1
+        ) {
+            Icon(
+                Icons.Default.ChevronRight,
+                contentDescription = "Next Month",
+                tint = if (currentIndex in 0 until months.size - 1) OnSurface else OnSurfaceVariant.copy(alpha = 0.3f)
+            )
         }
     }
 }
@@ -690,11 +969,12 @@ private fun MemberPaymentCard(
                 Text(member.name, style = MaterialTheme.typography.titleMedium, color = OnSurface)
                 Text("Hosts: ${monthName(member.hostMonth)}", style = MaterialTheme.typography.bodySmall, color = OnSurfaceVariant)
                 Spacer(Modifier.height(6.dp))
+                val displayAmount = if (payment != null && payment.amountPaid > 0) payment.amountPaid else member.amount
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("Amount:", style = MaterialTheme.typography.bodySmall, color = OnSurfaceVariant)
                     Spacer(Modifier.width(4.dp))
                     Text(
-                        formatAmount(payment?.amountPaid ?: 0.0),
+                        formatAmount(displayAmount),
                         style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold),
                         color = OnSurface
                     )
@@ -850,4 +1130,69 @@ private fun PayoutEntrySheet(
                 shape = RoundedCornerShape(12.dp)) { Text("Cancel", color = OnSurface) }
         }
     }
+}
+
+// ─── Share Monthly Status Summary Helper ───
+private fun shareKittyStatus(
+    context: Context,
+    kittyName: String,
+    month: Int,
+    year: Int,
+    target: Double,
+    collected: Double,
+    members: List<KittyMember>,
+    payments: Map<Long, KittyPayment?>,
+    hosts: List<KittyMember>
+) {
+    val pending = (target - collected).coerceAtLeast(0.0)
+    val paidMembers = members.filter { payments[it.id]?.isPaid == true }
+    val pendingMembers = members.filter { payments[it.id]?.isPaid != true }
+
+    val message = buildString {
+        appendLine("FinTrack — Kitty Collection Status")
+        appendLine("Kitty: $kittyName")
+        appendLine("Month: ${monthName(month)} $year")
+        if (hosts.isNotEmpty()) {
+            appendLine("Host(s): ${hosts.joinToString { it.name }}")
+        }
+        appendLine("------------------------------")
+        appendLine("Target: ${formatAmount(target)}")
+        appendLine("Collected: ${formatAmount(collected)} (${paidMembers.size}/${members.size} Paid)")
+        appendLine("Pending: ${formatAmount(pending)} (${pendingMembers.size} Unpaid)")
+        appendLine("------------------------------")
+
+        if (paidMembers.isNotEmpty()) {
+            appendLine("\nPaid Members (${paidMembers.size}):")
+            paidMembers.forEachIndexed { i, m ->
+                val p = payments[m.id]
+                val amt = if (p != null && p.amountPaid > 0) p.amountPaid else m.amount
+                val modeLabel = when (p?.paymentMode) {
+                    PaymentMode.CASH -> "Cash"
+                    PaymentMode.ONLINE -> "Online" + (if (p.onlineAccountName != null) " - ${p.onlineAccountName}" else "")
+                    PaymentMode.OFFICE -> "Raj Office"
+                    PaymentMode.HOST -> "Host"
+                    PaymentMode.SELF -> "Self"
+                    null -> ""
+                }
+                val modeStr = if (modeLabel.isNotBlank()) " ($modeLabel)" else ""
+                appendLine("${i + 1}. ${m.name}: ${formatAmount(amt)}$modeStr")
+            }
+        }
+
+        if (pendingMembers.isNotEmpty()) {
+            appendLine("\nPending Members (${pendingMembers.size}):")
+            pendingMembers.forEachIndexed { i, m ->
+                val p = payments[m.id]
+                val amt = if (p != null && p.amountPaid > 0) p.amountPaid else m.amount
+                appendLine("${i + 1}. ${m.name}: ${formatAmount(amt)}")
+            }
+        }
+    }
+
+    val intent = Intent(Intent.ACTION_SEND).apply {
+        type = "text/plain"
+        putExtra(Intent.EXTRA_SUBJECT, "$kittyName — ${monthName(month)} $year Status")
+        putExtra(Intent.EXTRA_TEXT, message)
+    }
+    context.startActivity(Intent.createChooser(intent, "Share Kitty Status Report"))
 }

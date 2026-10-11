@@ -128,13 +128,17 @@ private fun PaymentHistoryRow(payment: KittyPayment) {
                     )
                 }
                 if (payment.paymentMode != null) {
-                    Text(
-                        "via ${payment.paymentMode.name}" +
-                                if (payment.onlineAccountName != null) " (${payment.onlineAccountName})" else "",
-                        style = MaterialTheme.typography.bodySmall, color = OnSurfaceVariant
-                    )
+                    Spacer(Modifier.height(4.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        ModeChip(payment.paymentMode.name)
+                        if (payment.onlineAccountName != null) {
+                            Spacer(Modifier.width(4.dp))
+                            Text("(${payment.onlineAccountName})", style = MaterialTheme.typography.labelSmall, color = OnSurfaceVariant)
+                        }
+                    }
                 }
                 if (!payment.note.isNullOrBlank()) {
+                    Spacer(Modifier.height(2.dp))
                     Text(
                         payment.note,
                         style = MaterialTheme.typography.bodySmall, color = OnSurfaceVariant
@@ -148,7 +152,12 @@ private fun PaymentHistoryRow(payment: KittyPayment) {
                     color = PaidGreen
                 )
             } else {
-                Text("Unpaid", style = MaterialTheme.typography.bodySmall, color = UnpaidRed)
+                Column(horizontalAlignment = Alignment.End) {
+                    Text("Unpaid", style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold), color = UnpaidRed)
+                    if (payment.amountPaid > 0) {
+                        Text(formatAmount(payment.amountPaid), style = MaterialTheme.typography.bodySmall, color = OnSurfaceVariant)
+                    }
+                }
             }
         }
     }

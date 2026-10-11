@@ -19,7 +19,9 @@ class Converters {
     fun fromPaymentMode(mode: PaymentMode?): String? = mode?.name
 
     @TypeConverter
-    fun toPaymentMode(value: String?): PaymentMode? = value?.let { PaymentMode.valueOf(it) }
+    fun toPaymentMode(value: String?): PaymentMode? = value?.let {
+        runCatching { PaymentMode.valueOf(it.trim().uppercase()) }.getOrNull()
+    }
 
     @TypeConverter
     fun fromTransactionType(type: TransactionType): String = type.name

@@ -36,6 +36,8 @@ class KittyRepository @Inject constructor(private val dao: KittyDao) {
         dao.getLatestPaymentForKitty(kittyId)
     suspend fun resetPaymentsForKittyMonth(kittyId: Long, month: Int, year: Int) =
         dao.resetPaymentsForKittyMonth(kittyId, month, year)
+    suspend fun restoreZeroPaymentAmountsForKittyMonth(kittyId: Long, month: Int, year: Int) =
+        dao.restoreZeroPaymentAmountsForKittyMonth(kittyId, month, year)
     suspend fun getPaymentForMemberMonth(memberId: Long, month: Int, year: Int): KittyPayment? =
         dao.getPaymentForMemberMonth(memberId, month, year)
     suspend fun upsertPayment(payment: KittyPayment): Long = dao.insertPayment(payment)

@@ -113,7 +113,8 @@ private fun LedgerCard(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Surface)
+        colors = CardDefaults.cardColors(containerColor = Surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp, pressedElevation = 3.dp)
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
@@ -121,22 +122,26 @@ private fun LedgerCard(
         ) {
             Box(
                 modifier = Modifier
-                    .size(48.dp)
-                    .clip(CircleShape)
-                    .background(accentColor.copy(alpha = 0.15f)),
+                    .size(46.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(accentColor.copy(alpha = 0.13f)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = ledgerIcon(ledger.iconId),
                     contentDescription = null,
                     tint = accentColor,
-                    modifier = Modifier.size(24.dp)
+                    modifier = Modifier.size(22.dp)
                 )
             }
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(ledger.name, style = MaterialTheme.typography.titleMedium, color = OnSurface)
+                    Text(
+                        ledger.name,
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                        color = OnSurface
+                    )
                     Spacer(Modifier.width(6.dp))
                     if (ledger.type == com.fintrack.data.local.entity.LedgerType.AUTO) {
                         Surface(
@@ -146,7 +151,7 @@ private fun LedgerCard(
                             Text(
                                 "AUTO",
                                 style = MaterialTheme.typography.labelSmall,
-                                color = PaidGreen,
+                                color = Primary,
                                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                             )
                         }
@@ -202,7 +207,7 @@ private fun AddLedgerSheet(
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        containerColor = SurfaceVariant,
+        containerColor = Surface,
         shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
         contentWindowInsets = { WindowInsets(0.dp) }
     ) {

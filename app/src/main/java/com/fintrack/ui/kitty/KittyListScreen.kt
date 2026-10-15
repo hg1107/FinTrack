@@ -97,27 +97,32 @@ private fun KittyListCard(kitty: Kitty, memberCount: Int, onClick: () -> Unit) {
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Surface)
+        colors = CardDefaults.cardColors(containerColor = Surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp, pressedElevation = 3.dp)
     ) {
         Column(Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 // Avatar
                 Box(
                     modifier = Modifier
-                        .size(36.dp)
-                        .clip(CircleShape)
+                        .size(44.dp)
+                        .clip(RoundedCornerShape(12.dp))
                         .background(PrimaryContainer),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
                         kitty.name.take(1).uppercase(),
-                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                        color = PaidGreen
+                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                        color = Primary
                     )
                 }
-                Spacer(Modifier.width(10.dp))
+                Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
-                    Text(kitty.name, style = MaterialTheme.typography.titleMedium, color = OnSurface)
+                    Text(
+                        kitty.name,
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                        color = OnSurface
+                    )
                     Text(
                         "Starts: ${monthName(kitty.startMonth)} ${kitty.startYear}",
                         style = MaterialTheme.typography.bodySmall,
@@ -127,21 +132,30 @@ private fun KittyListCard(kitty: Kitty, memberCount: Int, onClick: () -> Unit) {
                 // Member count badge
                 if (memberCount > 0) {
                     Surface(
-                        shape = CircleShape,
+                        shape = RoundedCornerShape(8.dp),
                         color = PrimaryContainer,
-                        modifier = Modifier.size(32.dp)
                     ) {
-                        Box(contentAlignment = Alignment.Center) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.Person,
+                                contentDescription = null,
+                                tint = Primary,
+                                modifier = Modifier.size(12.dp)
+                            )
                             Text(
                                 "$memberCount",
-                                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                                color = PaidGreen
+                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                color = Primary
                             )
                         }
                     }
                     Spacer(Modifier.width(6.dp))
                 }
-                Icon(Icons.Default.ChevronRight, null, tint = OnSurfaceVariant)
+                Icon(Icons.Default.ChevronRight, null, tint = Primary.copy(alpha = 0.5f))
             }
         }
     }

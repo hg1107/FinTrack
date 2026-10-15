@@ -2,36 +2,41 @@ package com.fintrack.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Background & Surface
-val Background = Color(0xFF0D0D0D)
-val Surface = Color(0xFF1A1A1A)
-val SurfaceVariant = Color(0xFF242424)
-val SurfaceContainer = Color(0xFF2A2A2A)
+// ── Backgrounds & Surfaces (warm off-white / cream tones) ──
+val Background        = Color(0xFFF5F2EE)   // warm parchment
+val Surface           = Color(0xFFFFFFFF)   // pure white cards
+val SurfaceVariant    = Color(0xFFEDE8E1)   // light warm grey
+val SurfaceContainer  = Color(0xFFE8E1D8)   // slightly deeper cream
 
-// Accent — Emerald Green
-val Primary = Color(0xFF2ECC71)
-val PrimaryVariant = Color(0xFF27AE60)
-val PrimaryContainer = Color(0xFF1A3D2B)
-val OnPrimary = Color(0xFF000000)
+// ── Primary accent — Forest Sage Green ──
+val Primary           = Color(0xFF4A7C59)   // deep natural sage
+val PrimaryVariant    = Color(0xFF3A6347)   // darker sage
+val PrimaryContainer  = Color(0xFFD4EDDA)   // soft mint wash
+val OnPrimary         = Color(0xFFFFFFFF)   // white on sage
 
-// Accent — Amber (for EMI alerts)
-val Amber = Color(0xFFF39C12)
-val AmberContainer = Color(0xFF3D2E0A)
+// ── Secondary accent — Warm Terracotta / Burnt Sienna ──
+val Secondary         = Color(0xFFB5541C)   // warm terracotta
+val SecondaryContainer = Color(0xFFF5DDD1)  // pale peach wash
+val OnSecondary       = Color(0xFFFFFFFF)
 
-// Error / Unpaid
-val Error = Color(0xFFE74C3C)
-val ErrorContainer = Color(0xFF3D1212)
-val OnError = Color(0xFFFFFFFF)
+// ── Amber / Golden for EMI & warnings ──
+val Amber             = Color(0xFFB07D2A)   // golden ochre
+val AmberContainer    = Color(0xFFF5E6C8)   // pale golden wash
 
-// Text
-val OnBackground = Color(0xFFFFFFFF)
-val OnSurface = Color(0xFFE8E8E8)
-val OnSurfaceVariant = Color(0xFFAAAAAA)
-val Outline = Color(0xFF3A3A3A)
-val OutlineVariant = Color(0xFF2A2A2A)
+// ── Error / Debit ──
+val Error             = Color(0xFFC0392B)   // natural warm red
+val ErrorContainer    = Color(0xFFFAD7D3)   // soft rose wash
+val OnError           = Color(0xFFFFFFFF)
 
-// Status colours
-val PaidGreen = Color(0xFF2ECC71)
-val UnpaidRed = Color(0xFFE74C3C)
-val DebitRed = Color(0xFFE74C3C)
-val CreditGreen = Color(0xFF2ECC71)
+// ── Text colours ──
+val OnBackground      = Color(0xFF1C1C1C)   // near-black
+val OnSurface         = Color(0xFF2A2A2A)   // dark charcoal
+val OnSurfaceVariant  = Color(0xFF7A7468)   // warm medium grey
+val Outline           = Color(0xFFCEC7BB)   // warm light border
+val OutlineVariant    = Color(0xFFE0D9D0)   // very light border
+
+// ── Status colours ──
+val PaidGreen         = Color(0xFF3D7A52)   // natural green
+val UnpaidRed         = Color(0xFFC0392B)   // warm red
+val DebitRed          = Color(0xFFC0392B)
+val CreditGreen       = Color(0xFF3D7A52)

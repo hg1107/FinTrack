@@ -1,13 +1,11 @@
 package com.fintrack.ui.navigation
 
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
@@ -37,7 +35,7 @@ fun FinTrackBottomNavBar(navController: NavController) {
 
     NavigationBar(
         containerColor = Surface,
-        tonalElevation = 8.dp
+        tonalElevation = 0.dp
     ) {
         bottomNavItems.forEach { dest ->
             val selected = currentRoute == dest.route

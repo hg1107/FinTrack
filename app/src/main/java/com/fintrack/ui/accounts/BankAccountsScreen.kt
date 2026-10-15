@@ -55,7 +55,8 @@ fun BankAccountsScreen(
                 Spacer(Modifier.height(4.dp))
                 Card(
                     shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = Surface)
+                    colors = CardDefaults.cardColors(containerColor = Surface),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                 ) {
                     Column(Modifier.padding(20.dp)) {
                         Text("Total Liquid Assets", style = MaterialTheme.typography.bodyMedium, color = OnSurfaceVariant)
@@ -165,7 +166,8 @@ private fun BankAccountListCard(account: BankAccount, onClick: () -> Unit) {
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Surface)
+        colors = CardDefaults.cardColors(containerColor = Surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp, pressedElevation = 3.dp)
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
@@ -173,24 +175,28 @@ private fun BankAccountListCard(account: BankAccount, onClick: () -> Unit) {
         ) {
             Box(
                 modifier = Modifier
-                    .size(48.dp)
-                    .clip(CircleShape)
-                    .background(Primary.copy(alpha = 0.15f)),
+                    .size(46.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(Primary.copy(alpha = 0.12f)),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(Icons.Default.AccountBalance, null, tint = Primary)
+                Icon(Icons.Default.AccountBalance, null, tint = Primary, modifier = Modifier.size(22.dp))
             }
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {
-                Text(account.name, style = MaterialTheme.typography.titleMedium, color = OnSurface)
+                Text(
+                    account.name,
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                    color = OnSurface
+                )
                 if (account.lastFourDigits.isNotBlank()) {
-                    Text("**** ${account.lastFourDigits}", style = MaterialTheme.typography.bodySmall, color = OnSurfaceVariant)
+                    Text("•••• ${account.lastFourDigits}", style = MaterialTheme.typography.bodySmall, color = OnSurfaceVariant)
                 }
             }
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                 contentDescription = "Navigate",
-                tint = OnSurfaceVariant
+                tint = Primary.copy(alpha = 0.5f)
             )
         }
     }

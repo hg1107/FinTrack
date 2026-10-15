@@ -4,19 +4,19 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
-private val FinTrackDarkColorScheme = darkColorScheme(
+private val FinTrackLightColorScheme = lightColorScheme(
     primary = Primary,
     onPrimary = OnPrimary,
     primaryContainer = PrimaryContainer,
-    onPrimaryContainer = PaidGreen,
-    secondary = Amber,
-    onSecondary = Color(0xFF1A1200),
-    secondaryContainer = AmberContainer,
-    onSecondaryContainer = Amber,
+    onPrimaryContainer = PrimaryVariant,
+    secondary = Secondary,
+    onSecondary = OnSecondary,
+    secondaryContainer = SecondaryContainer,
+    onSecondaryContainer = Secondary,
     error = Error,
     onError = OnError,
     errorContainer = ErrorContainer,
-    onErrorContainer = Color(0xFFFFB4A9),
+    onErrorContainer = Color(0xFF7A1F18),
     background = Background,
     onBackground = OnBackground,
     surface = Surface,
@@ -26,13 +26,13 @@ private val FinTrackDarkColorScheme = darkColorScheme(
     outline = Outline,
     outlineVariant = OutlineVariant,
     surfaceContainer = SurfaceContainer,
-    surfaceContainerHigh = Color(0xFF333333)
+    surfaceContainerHigh = Color(0xFFE0D9D0)
 )
 
 @Composable
 fun FinTrackTheme(content: @Composable () -> Unit) {
     MaterialTheme(
-        colorScheme = FinTrackDarkColorScheme,
+        colorScheme = FinTrackLightColorScheme,
         typography = FinTrackTypography,
         content = content
     )

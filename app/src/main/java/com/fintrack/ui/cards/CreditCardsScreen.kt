@@ -1,5 +1,6 @@
 package com.fintrack.ui.cards
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -10,6 +11,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -59,7 +61,7 @@ fun CreditCardsScreen(
                 Text(
                     formatAmount(state.totalOutstanding),
                     style = MaterialTheme.typography.displayMedium.copy(fontWeight = FontWeight.Bold),
-                    color = DebitRed
+                    color = if (state.totalOutstanding > 0) DebitRed else CreditGreen
                 )
             }
 
@@ -111,21 +113,30 @@ private fun CreditCardListItem(card: CreditCard, outstanding: Double, onClick: (
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Surface)
+        colors = CardDefaults.cardColors(containerColor = Surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp, pressedElevation = 3.dp)
     ) {
         Column(Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    Icons.Default.CreditCard,
-                    contentDescription = null,
-                    tint = Amber,
-                    modifier = Modifier.size(28.dp)
-                )
+                Box(
+                    modifier = Modifier
+                        .size(42.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(Secondary.copy(alpha = 0.12f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Default.CreditCard,
+                        contentDescription = null,
+                        tint = Secondary,
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
                 Spacer(Modifier.width(14.dp))
                 Column(Modifier.weight(1f)) {
-                    Text(card.name, style = MaterialTheme.typography.titleMedium, color = OnSurface)
+                    Text(card.name, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold), color = OnSurface)
                     if (card.lastFourDigits.isNotBlank()) {
-                        Text("**** ${card.lastFourDigits}", style = MaterialTheme.typography.bodySmall, color = OnSurfaceVariant)
+                        Text("•••• ${card.lastFourDigits}", style = MaterialTheme.typography.bodySmall, color = OnSurfaceVariant)
                     }
                     if (card.billingDueDay > 0) {
                         Text("Due: ${card.billingDueDay.ordinal()} of month",
@@ -146,15 +157,15 @@ private fun CreditCardListItem(card: CreditCard, outstanding: Double, onClick: (
                     }
                 }
                 Spacer(Modifier.width(4.dp))
-                Icon(Icons.Default.ChevronRight, null, tint = OnSurfaceVariant)
+                Icon(Icons.Default.ChevronRight, null, tint = Secondary.copy(alpha = 0.5f))
             }
             // Mini utilization bar for cards with a limit set
             if (card.creditLimit > 0 && outstanding > 0) {
                 Spacer(Modifier.height(10.dp))
                 LinearProgressIndicator(
                     progress = { (outstanding / card.creditLimit).toFloat().coerceIn(0f, 1f) },
-                    modifier = Modifier.fillMaxWidth().height(4.dp),
-                    color = if (outstanding / card.creditLimit > 0.8) Error else Amber,
+                    modifier = Modifier.fillMaxWidth().height(5.dp),
+                    color = if (outstanding / card.creditLimit > 0.8) Error else Secondary,
                     trackColor = SurfaceContainer
                 )
             }

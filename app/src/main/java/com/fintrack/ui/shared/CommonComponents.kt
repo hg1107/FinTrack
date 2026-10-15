@@ -61,30 +61,32 @@ fun SummaryCard(
         onClick = onClick,
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Surface)
+        colors = CardDefaults.cardColors(containerColor = Surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp, pressedElevation = 3.dp)
     ) {
         Row(
-            modifier = Modifier.padding(20.dp),
+            modifier = Modifier.padding(18.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
                 modifier = Modifier
-                    .size(48.dp)
-                    .clip(CircleShape)
-                    .background(iconTint.copy(alpha = 0.15f)),
+                    .size(46.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(iconTint.copy(alpha = 0.13f)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(icon, contentDescription = null, tint = iconTint, modifier = Modifier.size(24.dp))
             }
-            Spacer(Modifier.width(16.dp))
+            Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {
-                Text(title, style = MaterialTheme.typography.titleLarge, color = OnSurface)
+                Text(title, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold), color = OnSurface)
+                Spacer(Modifier.height(2.dp))
                 Text(subtitle, style = MaterialTheme.typography.bodySmall, color = OnSurfaceVariant)
             }
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                 contentDescription = "Navigate",
-                tint = OnSurfaceVariant
+                tint = iconTint.copy(alpha = 0.6f)
             )
         }
     }
@@ -191,15 +193,15 @@ fun EmptyState(
     ) {
         Box(
             modifier = Modifier
-                .size(72.dp)
+                .size(76.dp)
                 .clip(CircleShape)
                 .background(SurfaceVariant),
             contentAlignment = Alignment.Center
         ) {
-            Icon(icon, contentDescription = null, tint = OnSurfaceVariant, modifier = Modifier.size(36.dp))
+            Icon(icon, contentDescription = null, tint = Primary.copy(alpha = 0.5f), modifier = Modifier.size(38.dp))
         }
         Spacer(Modifier.height(16.dp))
-        Text(title, style = MaterialTheme.typography.titleMedium, color = OnSurface)
+        Text(title, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold), color = OnSurface)
         Spacer(Modifier.height(4.dp))
         Text(subtitle, style = MaterialTheme.typography.bodySmall, color = OnSurfaceVariant)
     }
@@ -324,7 +326,7 @@ fun FinFab(onClick: () -> Unit) {
         onClick = onClick,
         containerColor = Primary,
         contentColor = OnPrimary,
-        shape = RoundedCornerShape(16.dp)
+        shape = CircleShape
     ) {
         Icon(
             imageVector = Icons.Filled.Add,
